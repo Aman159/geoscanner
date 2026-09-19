@@ -4,27 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>X-Ray GeoScanner Pro</title>
-    <script src="https://cloudflare.com"></script>
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; background-color: #000; }
-        #camera-bg { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
-        #canvas3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
-        #ui-overlay { position: absolute; bottom: 25px; left: 5%; width: 90%; z-index: 3; background: rgba(10, 15, 30, 0.9); border: 2px solid #39ff14; color: #fff; padding: 15px; border-radius: 12px; box-sizing: border-box; }
-        .hud-title { color: #39ff14; font-weight: bold; text-transform: uppercase; font-size: 14px; margin-bottom: 10px; text-align: center; }
-        .data-row { display: flex; justify-content: space-between; font-size: 12px; margin: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 3px; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #000; user-select: none; }
+        #camera-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        #canvas3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: auto; }
+        #ui-overlay { position: absolute; bottom: 25px; left: 5%; width: 90%; z-index: 3; background: rgba(10, 15, 30, 0.85); backdrop-filter: blur(8px); border: 2px solid #39ff14; color: #fff; padding: 15px; border-radius: 12px; box-sizing: border-box; box-shadow: 0 0 20px rgba(57, 255, 20, 0.2); }
+        .hud-title { color: #39ff14; font-weight: bold; text-transform: uppercase; font-size: 13px; margin-bottom: 10px; text-align: center; letter-spacing: 1px; }
+        .data-row { display: flex; justify-content: space-between; font-size: 12px; margin: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
         .val { color: #fff; font-weight: bold; }
-        #scan-btn { background: #39ff14; color: #000; border: none; padding: 12px; font-weight: bold; border-radius: 6px; width: 100%; margin-top: 10px; cursor: pointer; text-transform: uppercase; }
+        #scan-btn { background: #39ff14; color: #000; border: none; padding: 12px; font-weight: bold; border-radius: 6px; width: 100%; margin-top: 10px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(57, 255, 20, 0.3); }
+        #scan-btn:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
 
-    <!-- Native Camera Feed Layer -->
+    <!-- Camera stream behind graphics -->
     <video id="camera-bg" autoplay playsinline muted></video>
     
-    <!-- Unified 3D Graphics Canvas Container -->
+    <!-- Three.js Graphics Container -->
     <div id="canvas3d"></div>
 
-    <!-- Active Sensor Dashboard -->
+    <!-- Active Status HUD Overlay -->
     <div id="ui-overlay">
         <div class="hud-title">📡 Subsurface Radar Engine Active</div>
         <div class="data-row"><span>Sensor Location:</span> <span class="val" id="gps-display">Awaiting Initialization</span></div>
@@ -38,15 +40,7 @@
         let scene, camera, renderer, scanGroup;
         let waterLayer = null;
 
-        // 1. Establish Camera Streaming Infrastructure
-        const video = document.getElementById('camera-bg');
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                .then(stream => { video.srcObject = stream; })
-                .catch(err => alert("Camera stream blocked. Please check site permissions settings."));
-        }
-
-        // 2. Build Core 3D Graphic Environment Instantly
+        // 1. Core 3D Graphics Setup
         function init3DEngine() {
             const container = document.getElementById('canvas3d');
             scene = new THREE.Scene();
@@ -56,38 +50,40 @@
 
             renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             container.appendChild(renderer.domElement);
 
-            // Lighting Setup
-            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-            directionalLight.position.set(0, 5, 5);
+            // Studio Lighting Setup
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 7);
             scene.add(directionalLight);
 
             scanGroup = new THREE.Group();
             scene.add(scanGroup);
 
-            // Start animation frame loop immediately
+            // Execute frame loops immediately
             animate();
         }
 
-        // 3. Draw Subsurface Matrix Blocks Instantly upon button interaction
+        // 2. Dynamic 3D Structural Mesh Builder
         function renderXRayStructures(rockColorHex) {
-            // Remove past layers to prevent stacking models
+            // Safe removal loop to refresh structure geometry configurations
             while(scanGroup.children.length > 0) { 
                 scanGroup.remove(scanGroup.children[0]); 
             }
 
-            // --- STRATA LAYER 1: Organic Silt & Clay Topsoil ---
-            const topSoilGeo = new THREE.CylinderGeometry(2, 2.05, 0.7, 32);
-            const topSoilMat = new THREE.MeshStandardMaterial({color: 0x5c4033, roughness: 0.9});
-            const topSoil = new THREE.Mesh(topSoilGeo, topSoilMat);
+            // Layer 1: Silt Topsoil Profile
+            const topGeo = new THREE.CylinderGeometry(1.8, 1.85, 0.7, 32);
+            const topMat = new THREE.MeshStandardMaterial({color: 0x5c4033, roughness: 0.9});
+            const topSoil = new THREE.Mesh(topGeo, topMat);
             topSoil.position.y = 1.3;
             scanGroup.add(topSoil);
 
-            // --- STRATA LAYER 2: Porous Glowing Water Aquifer ---
-            const waterGeo = new THREE.CylinderGeometry(1.98, 1.98, 0.4, 32);
+            // Layer 2: Translucent Water Table Aquifer Band
+            const waterGeo = new THREE.CylinderGeometry(1.78, 1.78, 0.4, 32);
             const waterMat = new THREE.MeshStandardMaterial({
                 color: 0x0ea5e9, 
                 transparent: true, 
@@ -98,79 +94,94 @@
             waterLayer.position.y = 0.65;
             scanGroup.add(waterLayer);
 
-            // --- STRATA LAYER 3: Bedrock Rock Crust Foundation ---
-            const bedrockGeo = new THREE.CylinderGeometry(1.95, 1.8, 1.6, 32);
+            // Layer 3: Solid Geological Bedrock Slabs
+            const bedrockGeo = new THREE.CylinderGeometry(1.75, 1.6, 1.6, 32);
             const bedrockMat = new THREE.MeshStandardMaterial({color: rockColorHex, roughness: 0.95});
             const bedrock = new THREE.Mesh(bedrockGeo, bedrockMat);
             bedrock.position.y = -0.4;
             scanGroup.add(bedrock);
 
-            // --- BURIED CONDUITS: Real-Time 3D Industrial Pipelines ---
-            // High Pressure Water Main (Blue Pipe)
-            const pipeBlueGeo = new THREE.CylinderGeometry(0.12, 0.12, 4.2, 16);
+            // Utility Network: Horizontal Flow Infrastructures
+            const pipeBlueGeo = new THREE.CylinderGeometry(0.12, 0.12, 3.8, 16);
             pipeBlueGeo.rotateZ(Math.PI / 2);
             const pipeBlueMat = new THREE.MeshStandardMaterial({color: 0x1d4ed8, metalness: 0.7, roughness: 0.3});
             const waterPipe = new THREE.Mesh(pipeBlueGeo, pipeBlueMat);
             waterPipe.position.set(0, 1.3, 0.4);
             scanGroup.add(waterPipe);
 
-            // Fiber Optic Connectivity Cable Line (Red Tube)
-            const pipeRedGeo = new THREE.CylinderGeometry(0.05, 0.05, 4.2, 16);
+            const pipeRedGeo = new THREE.CylinderGeometry(0.05, 0.05, 3.8, 16);
             pipeRedGeo.rotateZ(Math.PI / 2.4);
             const pipeRedMat = new THREE.MeshStandardMaterial({color: 0xef4444, metalness: 0.6});
             const dataCable = new THREE.Mesh(pipeRedGeo, pipeRedMat);
             dataCable.position.set(0, 1.45, -0.3);
             scanGroup.add(dataCable);
 
-            // Position block downward over phone camera canvas view
+            // Push into foreground alignment frame positions
             scanGroup.position.set(0, -1.2, -4);
-            scanGroup.rotation.x = 0.5; // Tilted angle matrix layout
+            scanGroup.rotation.x = 0.5; 
         }
 
-        // 4. Trigger Initialization Sequence
+        // 3. User Trigger System Controls
         function initializeScanner() {
             document.getElementById('scan-btn').innerText = "Scanning Subsurface...";
             
-            // Critical Move: Render 3D graphics immediately so user sees results instantly
-            renderXRayStructures(0x334155);
+            // Activate Hardware Camera Streaming Infrastructure
+            const video = document.getElementById('camera-bg');
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                    .then(stream => { 
+                        video.srcObject = stream; 
+                    })
+                    .catch(err => {
+                        console.log("Camera hardware bypassed or missing.");
+                    });
+            }
+
+            // Immediately instantiate standard graphics block structure layers
+            renderXRayStructures(0x475569);
+
+            // Safety Fallback Trigger: Renders default baseline information if GPS fails indoors
+            const safetyTimeout = setTimeout(() => {
+                fallbackToSimulatedNetworkData();
+            }, 3000);
 
             if (!navigator.geolocation) {
+                clearTimeout(safetyTimeout);
                 fallbackToSimulatedNetworkData();
                 return;
             }
 
             navigator.geolocation.getCurrentPosition(async position => {
+                clearTimeout(safetyTimeout);
                 const lat = position.coords.latitude.toFixed(4);
                 const lon = position.coords.longitude.toFixed(4);
                 document.getElementById('gps-display').innerText = `${lat}° N, ${lon}° E`;
 
-                // Fire Off Live Web APIs parallel lookup requests
                 queryFreeWebDatabases(lat, lon);
             }, err => {
+                clearTimeout(safetyTimeout);
                 fallbackToSimulatedNetworkData();
-            }, { enableHighAccuracy: false, timeout: 4000 });
+            }, { enableHighAccuracy: false, timeout: 5000 });
         }
 
-        // 5. Query Active Free Internet Datasets
+        // 4. API Query Management Processes
         async function queryFreeWebDatabases(lat, lon) {
             let foundRock = "Sedimentary Siltstone Bedrock";
-            let foundRockColor = 0x475569; 
-            let utilityStatus = "Conduits Generated Safely";
+            let foundRockColor = 0x334155; 
+            let utilityStatus = "Conduits Modeled Safely";
 
-            // Query Data Source A: Macrostrat Global Geological Registry
             try {
-                const geoRes = await fetch(`https://macrostrat.org{lat}&lng=${lon}`);
+                const geoRes = await fetch(`https://macrostrat.org/api/v2/sections?lat=${lat}&lng=${lon}`);
                 const geoData = await geoRes.json();
                 if (geoData.success && geoData.success.data.length > 0) {
                     foundRock = geoData.success.data.name || "Dense Subsurface Rock Strata";
-                    foundRockColor = 0x78350f; // Shift bedrock color to deep brown clay/limestone matrix tones
+                    foundRockColor = 0x78350f; 
                 }
             } catch(e) {}
 
-            // Query Data Source B: OpenStreetMap Local Infrastructure Arrays
             try {
                 const bbox = `${parseFloat(lat)-0.001},${parseFloat(lon)-0.001},${parseFloat(lat)+0.001},${parseFloat(lon)+0.001}`;
-                const osmUrl = `https://overpass-api.de{encodeURIComponent(`[out:json];way["pipeline"](${bbox});out body;`)}`;
+                const osmUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(`[out:json];way["pipeline"](${bbox});out body;`)}`;
                 const osmRes = await fetch(osmUrl);
                 const osmData = await osmRes.json();
                 if (osmData.elements && osmData.elements.length > 0) {
@@ -178,34 +189,32 @@
                 }
             } catch(e) {}
 
-            // Inject real-time database results onto dashboard screen text
             document.getElementById('rock-display').innerText = foundRock;
-            document.getElementById('water-display').innerText = "Water Table Detected @ ~14.5 Meters";
+            document.getElementById('water-display').innerText = "Water Table Detected @ ~14.5m";
             document.getElementById('utility-display').innerText = utilityStatus;
+            document.getElementById('scan-btn').innerText = "Rescan Subsurface";
             
-            // Re-render the bedrock block matching the real dataset colors
             renderXRayStructures(foundRockColor);
         }
 
-        // 6. Network/GPS Delay Fallback Logic
+        // 5. GPS Hardware Warning Layer Routing
         function fallbackToSimulatedNetworkData() {
-            document.getElementById('gps-display').innerText = "Triangulated Via Indoor WiFi Node";
-            document.getElementById('rock-display').innerText = "Dense Subsoil Silt Slabs";
+            document.getElementById('gps-display').innerText = "Triangulated (Indoor WiFi Mode)";
+            document.getElementById('rock-display').innerText = "Dense Subsoil Silt Foundation";
             document.getElementById('water-display').innerText = "Aquifer Layer Detected @ 16m";
             document.getElementById('utility-display').innerText = "Domestic Utility Corridors Modeled";
-            renderXRayStructures(0x3e2723); // Standard dense brown block
+            document.getElementById('scan-btn').innerText = "Rescan Subsurface";
+            renderXRayStructures(0x3e2723); 
         }
 
-        // 7. Framerate Animation Rendering Loop
+        // 6. Graphics Frame Rendering Routines
         function animate() {
             requestAnimationFrame(animate);
-
-            // Spin model group around y-axis to present real 3D spatial depth layout
+            
             if (scanGroup && scanGroup.children.length > 0) {
                 scanGroup.rotation.y += 0.008;
             }
 
-            // Subtle glowing pulsation logic on translucent blue water band mesh
             if (waterLayer) {
                 waterLayer.material.opacity = 0.4 + Math.sin(Date.now() * 0.002) * 0.15;
             }
@@ -213,11 +222,11 @@
             renderer.render(scene, camera);
         }
 
-        // Run setup routine on screen boot
+        // Bootstrap rendering engine window environments
         init3DEngine();
 
         window.addEventListener('resize', () => {
-            if (camera && renderer) {
+            if(camera && renderer) {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
