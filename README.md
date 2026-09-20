@@ -12,7 +12,8 @@ This application does **not** see through soil and must never be used to authori
 - High-accuracy browser geolocation
 - Device heading and tilt response
 - Public Macrostrat geology lookup, with transparent fallback
-- Three.js conceptual layered profile
+- Clearly visible Three.js excavation cutaway with labels, layer boundaries, lighting, and depth
+- Interactive full-screen 3D mode with touch rotation, pinch zoom, and pan
 - Depth visualization control
 - Installable PWA shell and offline caching for app assets
 - No API key, backend, account, or paid cloud resource required

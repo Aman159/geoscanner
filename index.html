@@ -13,6 +13,7 @@
   <main id="app">
     <video id="camera" autoplay playsinline muted></video>
     <canvas id="scene"></canvas>
+    <div id="viewBadge" class="viewBadge">3D CUTAWAY ACTIVE</div>
     <div class="vignette"></div>
 
     <header class="topbar glass">
@@ -38,6 +39,7 @@
       <h2 id="unitName">Waiting for scan</h2>
       <p id="unitMeta">Start the camera and location scan to retrieve public geological context.</p>
       <div id="layers" class="layers"></div>
+      <div class="gestureHint">Drag to rotate · Pinch to zoom · Two-finger drag to move</div>
       <div class="sourceBox">
         <strong>What this means</strong>
         <p id="explanation">The rendered layers are an approximate educational model, not a measurement of buried utilities, cavities, archaeology, or exact excavation conditions.</p>
@@ -48,6 +50,8 @@
       <button id="startBtn" class="primary">Start camera + scan</button>
       <button id="rescanBtn">Refresh data</button>
       <button id="demoBtn">Demo location</button>
+      <button id="viewBtn">3D full view</button>
+      <button id="resetBtn">Reset 3D</button>
       <label class="depthControl">Depth <input id="depth" type="range" min="10" max="120" value="55" /><span id="depthValue">55 m</span></label>
     </section>
 
