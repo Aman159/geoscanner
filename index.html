@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,10 +6,6 @@
     <title>X-Ray GeoScanner Pro</title>
     <!-- Three.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <title>Subsurface 3D CAD Infrastructure Engine</title>
-    <!-- Three.js for 3D engine and OrbitControls for touch rotation -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #000; user-select: none; }
         #camera-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
@@ -20,22 +16,6 @@
         .val { color: #fff; font-weight: bold; }
         #scan-btn { background: #39ff14; color: #000; border: none; padding: 12px; font-weight: bold; border-radius: 6px; width: 100%; margin-top: 10px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(57, 255, 20, 0.3); }
         #scan-btn:active { transform: scale(0.98); }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background-color: #0f172a; }
-        #canvas3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-        
-        /* Designer UI HUD Layer */
-        #ui-overlay { position: absolute; top: 15px; left: 5%; width: 90%; z-index: 2; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px); color: #fff; padding: 15px; border-radius: 12px; border: 1px solid #39ff14; box-shadow: 0 10px 25px rgba(0,0,0,0.5); box-sizing: border-box; }
-        .title { color: #39ff14; font-weight: bold; text-transform: uppercase; font-size: 13px; margin-bottom: 8px; letter-spacing: 1px; text-align: center;}
-        
-        /* Control Panel Toolbox */
-        .control-group { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; }
-        .tool-btn { flex: 1; background: #1e293b; border: 1px solid #475569; color: #fff; padding: 10px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 11px; text-transform: uppercase; transition: all 0.2s; }
-        .tool-btn.active { background: #39ff14; color: #000; border-color: #39ff14; }
-        
-        .slider-container { margin-top: 10px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #94a3b8; }
-        input[type=range] { flex: 1; margin-left: 10px; accent-color: #39ff14; }
-        
-        #instruction-tag { position: absolute; bottom: 20px; left: 5%; width: 90%; text-align: center; color: rgba(255,255,255,0.6); font-size: 11px; z-index: 2; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -44,11 +24,9 @@
     <video id="camera-bg" autoplay playsinline muted></video>
     
     <!-- Three.js Graphics Container -->
-    <!-- Target Renderer Viewport Canvas -->
     <div id="canvas3d"></div>
 
     <!-- Active Status HUD Overlay -->
-    <!-- Subsurface Tool Control Panel -->
     <div id="ui-overlay">
         <div class="hud-title">📡 Subsurface Radar Engine Active</div>
         <div class="data-row"><span>Sensor Location:</span> <span class="val" id="gps-display">Awaiting Initialization</span></div>
@@ -56,101 +34,35 @@
         <div class="data-row"><span>Aquifer Water Table:</span> <span class="val" id="water-display" style="color:#38bdf8;">Idle</span></div>
         <div class="data-row"><span>Buried Conduits:</span> <span class="val" id="utility-display" style="color:#f87171;">Idle</span></div>
         <button id="scan-btn" onclick="initializeScanner()">Initialize Deep Scan</button>
-        <div class="title">🛠️ Underground Structure Designer v1.0</div>
-        
-        <div class="slider-container">
-            <span>Placement Depth:</span>
-            <input type="range" id="depthSlider" min="1" max="5" step="0.5" value="2">
-            <span id="depthVal" style="color:#39ff14; font-weight:bold; margin-left:5px;">-2.0m</span>
-        </div>
-
-        <div class="control-group">
-            <button class="tool-btn active" id="btn-water" onclick="selectTool('water')">💧 Water Main</button>
-            <button class="tool-btn" id="btn-electric" onclick="selectTool('electric')">⚡ Power Line</button>
-            <button class="tool-btn" id="btn-clear" onclick="clearDesign()" style="background:#7f1d1d; color:#fca5a5; border-color:#991b1b;">Reset Grid</button>
-        </div>
     </div>
 
     <script>
         let scene, camera, renderer, scanGroup;
         let waterLayer = null;
-    <div id="instruction-tag">💻 Desktop: Left Click to build structures • Right Click to rotate grid.<br>📱 Mobile: Tap grid to build • Drag with two fingers to rotate scene perspective.</div>
 
         // 1. Core 3D Graphics Setup
         function init3DEngine() {
-    <script>
-        let scene, camera, renderer, controls;
-        let gridPlane, raycaster, mouse;
-        let selectedTool = 'water';
-        
-        // Setup internal component styles
-        const toolColors = { water: 0x00bfff, electric: 0xff3333 };
-        const toolRadii = { water: 0.12, electric: 0.05 };
-
-        // 1. Initialize Visual Engine Frame
-        function init() {
             const container = document.getElementById('canvas3d');
             scene = new THREE.Scene();
             
-            scene.background = new THREE.Color(0x0f172a); // Deep layout slate tone
-
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 0, 7);
-            camera.position.set(0, 8, 10); // Elevated angle looking down onto the floor grid
 
             renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-            renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.setPixelRatio(window.devicePixelRatio);
             container.appendChild(renderer.domElement);
 
             // Studio Lighting Setup
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
-            // Orbit controls hookup for complete structural finger swiping rotation
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2.1; // Limit angle so camera doesn't go below fake floor
-
-            // Lighting Systems
-            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(10, 20, 10);
-            scene.add(dirLight);
-
-            // 2. Generate the "Floor Mesh" Representing Your Apartment Tiles
-            // Floor Grid Helper (Simulates the surface level)
-            const gridHelper = new THREE.GridHelper(10, 20, 0x39ff14, 0x334155);
-            gridHelper.position.y = 0;
-            scene.add(gridHelper);
-
-            // Translucent Plane to catch mouse pointer calculation clicks
-            const planeGeo = new THREE.PlaneGeometry(10, 10);
-            planeGeo.rotateX(-Math.PI / 2);
-            const planeMat = new THREE.MeshBasicMaterial({ visible: false });
-            gridPlane = new THREE.Mesh(planeGeo, planeMat);
-            scene.add(gridPlane);
-
-            // Setup Raycasting structures to identify where finger coordinates tap on screen
-            raycaster = new THREE.Raycaster();
-            mouse = new THREE.Vector2();
-
-            // Event Listeners
-            window.addEventListener('pointerdown', onGridClick);
-            window.addEventListener('resize', onWindowResize);
-
+            
             const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
             directionalLight.position.set(5, 10, 7);
             scene.add(directionalLight);
 
             scanGroup = new THREE.Group();
             scene.add(scanGroup);
-            // Depth Slider Listener
-            document.getElementById('depthSlider').addEventListener('input', (e) => {
-                document.getElementById('depthVal').innerText = `-${parseFloat(e.target.value).toFixed(1)}m`;
-            });
 
             // Execute frame loops immediately
             animate();
@@ -207,12 +119,6 @@
             // Push into foreground alignment frame positions
             scanGroup.position.set(0, -1.2, -4);
             scanGroup.rotation.x = 0.5; 
-        // 3. Toolbox Selection Interface Logic
-        function selectTool(toolType) {
-            selectedTool = toolType;
-            document.getElementById('btn-water').classList.remove('active');
-            document.getElementById('btn-electric').classList.remove('active');
-            document.getElementById(`btn-${toolType}`).classList.add('active');
         }
 
         // 3. User Trigger System Controls
@@ -229,53 +135,6 @@
                     .catch(err => {
                         console.log("Camera hardware bypassed or missing.");
                     });
-        // 4. Raycasting Engine: Adds a 3D structural pipe right underneath your click location
-        function onGridClick(event) {
-            // Disable structure creation if interacting with overlay box controls
-            if (event.clientY < 140 && event.clientX > window.innerWidth * 0.05 && event.clientX < window.innerWidth * 0.95) return;
-
-            // Normalize coordinate system mapping vectors
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObject(gridPlane);
-
-            if (intersects.length > 0) {
-                const intersectPoint = intersects[0].point;
-                const chosenDepth = parseFloat(document.getElementById('depthSlider').value);
-
-                // Build a 3D Cylinder line structure (a pipeline segment)
-                const segmentLength = 1.2;
-                const pipeGeo = new THREE.CylinderGeometry(toolRadii[selectedTool], toolRadii[selectedTool], segmentLength, 16);
-                pipeGeo.rotateZ(Math.PI / 2); // Align laying flat
-
-                const pipeMat = new THREE.MeshStandardMaterial({
-                    color: toolColors[selectedTool],
-                    metalness: 0.7,
-                    roughness: 0.2,
-                    wireframe: false
-                });
-
-                const pipeSegment = new THREE.Mesh(pipeGeo, pipeMat);
-                
-                // Position object precisely where tap occurred, dropping it downwards based on slider meters value
-                pipeSegment.position.set(intersectPoint.x, -chosenDepth, intersectPoint.z);
-                
-                // Add tag descriptor identifier variables to model group structure arrays
-                pipeSegment.userData = { isStructure: true };
-                scene.add(pipeSegment);
-
-                // Add a matching warning dashed wire structure connecting it up to surface to visualize the underground layout connection path
-                const lineGeo = new THREE.BufferGeometry().setFromPoints([
-                    new THREE.Vector3(intersectPoint.x, 0, intersectPoint.z),
-                    new THREE.Vector3(intersectPoint.x, -chosenDepth, intersectPoint.z)
-                ]);
-                const lineMat = new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.2, gapSize: 0.1 });
-                const indicatorLine = new THREE.Line(lineGeo, lineMat);
-                indicatorLine.computeLineDistances();
-                indicatorLine.userData = { isStructure: true };
-                scene.add(indicatorLine);
             }
 
             // Immediately instantiate standard graphics block structure layers
@@ -317,12 +176,6 @@
                 if (geoData.success && geoData.success.data.length > 0) {
                     foundRock = geoData.success.data.name || "Dense Subsurface Rock Strata";
                     foundRockColor = 0x78350f; 
-        // 5. Clean Screen Utility Routine
-        function clearDesign() {
-            const structuresToRemove = [];
-            scene.traverse((child) => {
-                if (child.userData && child.userData.isStructure) {
-                    structuresToRemove.push(child);
                 }
             } catch(e) {}
 
@@ -352,12 +205,9 @@
             document.getElementById('utility-display').innerText = "Domestic Utility Corridors Modeled";
             document.getElementById('scan-btn').innerText = "Rescan Subsurface";
             renderXRayStructures(0x3e2723); 
-            });
-            structuresToRemove.forEach(obj => scene.remove(obj));
         }
 
         // 6. Graphics Frame Rendering Routines
-        // 6. Framing Thread Core Renderer
         function animate() {
             requestAnimationFrame(animate);
             
@@ -369,17 +219,11 @@
                 waterLayer.material.opacity = 0.4 + Math.sin(Date.now() * 0.002) * 0.15;
             }
 
-            controls.update(); // Smooth view rotations
             renderer.render(scene, camera);
         }
 
         // Bootstrap rendering engine window environments
         init3DEngine();
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
 
         window.addEventListener('resize', () => {
             if(camera && renderer) {
@@ -391,5 +235,3 @@
     </script>
 </body>
 </html>
-        // Boot initialization sequence
-        init();
