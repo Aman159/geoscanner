@@ -3,19 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subsurface 3D CAD Infrastructure Engine</title>
-    <!-- Three.js for 3D engine and OrbitControls for touch rotation -->
+    <title>Subsurface X-Ray AR CAD Engine</title>
+    <!-- Three.js for 3D engine and OrbitControls for swiping touch rotation -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background-color: #0f172a; }
-        #canvas3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background-color: #000; }
         
-        /* Designer UI HUD Layer */
-        #ui-overlay { position: absolute; top: 15px; left: 5%; width: 90%; z-index: 2; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px); color: #fff; padding: 15px; border-radius: 12px; border: 1px solid #39ff14; box-shadow: 0 10px 25px rgba(0,0,0,0.5); box-sizing: border-box; }
-        .title { color: #39ff14; font-weight: bold; text-transform: uppercase; font-size: 13px; margin-bottom: 8px; letter-spacing: 1px; text-align: center;}
+        /* 1. Live Camera Feed Layer (Locks underneath the graphics) */
+        #camera-bg { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; }
         
-        /* Control Panel Toolbox */
+        /* 2. Transparent 3D Canvas Layer */
+        #canvas3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
+        
+        /* 3. Designer HUD Control Panel Dashboard */
+        #ui-overlay { position: absolute; top: 15px; left: 5%; width: 90%; z-index: 3; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); color: #fff; padding: 15px; border-radius: 12px; border: 1px solid #39ff14; box-shadow: 0 10px 25px rgba(0,0,0,0.5); box-sizing: border-box; }
+        .title { color: #39ff14; font-weight: bold; text-transform: uppercase; font-size: 13px; margin-bottom: 8px; letter-spacing: 1px; text-align: center; }
+        
         .control-group { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; }
         .tool-btn { flex: 1; background: #1e293b; border: 1px solid #475569; color: #fff; padding: 10px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 11px; text-transform: uppercase; transition: all 0.2s; }
         .tool-btn.active { background: #39ff14; color: #000; border-color: #39ff14; }
@@ -23,98 +27,109 @@
         .slider-container { margin-top: 10px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #94a3b8; }
         input[type=range] { flex: 1; margin-left: 10px; accent-color: #39ff14; }
         
-        #instruction-tag { position: absolute; bottom: 20px; left: 5%; width: 90%; text-align: center; color: rgba(255,255,255,0.6); font-size: 11px; z-index: 2; pointer-events: none; }
+        #instruction-tag { position: absolute; bottom: 20px; left: 5%; width: 90%; text-align: center; color: rgba(255,255,255,0.8); font-weight: 500; font-size: 11px; z-index: 3; pointer-events: none; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
     </style>
 </head>
 <body>
 
-    <!-- Target Renderer Viewport Canvas -->
+    <!-- Target Camera Hardware Background Layer Feed -->
+    <video id="camera-bg" autoplay playsinline muted></video>
+
+    <!-- Interactive Layer Grid Overlay Viewport -->
     <div id="canvas3d"></div>
 
-    <!-- Subsurface Tool Control Panel -->
+    <!-- Active Structural CAD Command Deck -->
     <div id="ui-overlay">
-        <div class="title">🛠️ Underground Structure Designer v1.0</div>
+        <div class="title">📡 Subsurface X-Ray AR Blueprint Engine</div>
         
         <div class="slider-container">
-            <span>Placement Depth:</span>
-            <input type="range" id="depthSlider" min="1" max="5" step="0.5" value="2">
-            <span id="depthVal" style="color:#39ff14; font-weight:bold; margin-left:5px;">-2.0m</span>
+            <span>Target Depth:</span>
+            <input type="range" id="depthSlider" min="0.5" max="5" step="0.5" value="1.5">
+            <span id="depthVal" style="color:#39ff14; font-weight:bold; margin-left:5px;">-1.5m</span>
         </div>
 
         <div class="control-group">
-            <button class="tool-btn active" id="btn-water" onclick="selectTool('water')">💧 Water Main</button>
-            <button class="tool-btn" id="btn-electric" onclick="selectTool('electric')">⚡ Power Line</button>
-            <button class="tool-btn" id="btn-clear" onclick="clearDesign()" style="background:#7f1d1d; color:#fca5a5; border-color:#991b1b;">Reset Grid</button>
+            <button class="tool-btn active" id="btn-water" onclick="selectTool('water')">💧 Pipe</button>
+            <button class="tool-btn" id="btn-electric" onclick="selectTool('electric')">⚡ Wire</button>
+            <button class="tool-btn" id="btn-clear" onclick="clearDesign()" style="background:#7f1d1d; color:#fca5a5; border-color:#991b1b;">Reset Scan</button>
         </div>
     </div>
 
-    <div id="instruction-tag">💻 Desktop: Left Click to build structures • Right Click to rotate grid.<br>📱 Mobile: Tap grid to build • Drag with two fingers to rotate scene perspective.</div>
+    <div id="instruction-tag">Tap the screen matrix to drop real 3D structures underneath your floor tiles.<br>Swipe with two fingers to rotate or align the grid mesh angle.</div>
 
     <script>
         let scene, camera, renderer, controls;
         let gridPlane, raycaster, mouse;
         let selectedTool = 'water';
         
-        // Setup internal component styles
         const toolColors = { water: 0x00bfff, electric: 0xff3333 };
-        const toolRadii = { water: 0.12, electric: 0.05 };
+        const toolRadii = { water: 0.14, electric: 0.05 };
 
-        // 1. Initialize Visual Engine Frame
-        function init() {
+        // 1. Initialize Device Camera Stream Behind 3D Engine
+        const video = document.getElementById('camera-bg');
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(stream => { video.srcObject = stream; })
+                .catch(err => alert("Camera stream access was denied. Please adjust your site permission locks."));
+        }
+
+        // 2. Setup High-Performance Transparent 3D Canvas
+        ZionInitEngine();
+
+        function ZionInitEngine() {
             const container = document.getElementById('canvas3d');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0f172a); // Deep layout slate tone
 
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 8, 10); // Elevated angle looking down onto the floor grid
+            camera.position.set(0, 7, 9); // Tilted perspective angle looking down into the floor coordinate plane
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            // Setup renderer with alpha channel enabled for complete background transparency
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             container.appendChild(renderer.domElement);
 
-            // Orbit controls hookup for complete structural finger swiping rotation
+            // Orbit controls integration for smooth structural room angle customization
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2.1; // Limit angle so camera doesn't go below fake floor
+            controls.maxPolarAngle = Math.PI / 2.05; // Prevent camera clipping below floor plane grid lines
 
-            // Lighting Systems
-            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(10, 20, 10);
-            scene.add(dirLight);
+            // Engine Lighting Arrays
+            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            directionalLight.position.set(5, 15, 5);
+            scene.add(directionalLight);
 
-            // 2. Generate the "Floor Mesh" Representing Your Apartment Tiles
-            // Floor Grid Helper (Simulates the surface level)
-            const gridHelper = new THREE.GridHelper(10, 20, 0x39ff14, 0x334155);
-            gridHelper.position.y = 0;
-            scene.add(gridHelper);
+            // 3. Establish the Alignment Ground Grid
+            // Transparent neon matrix representing the floor surface boundary lines
+            const alignmentGrid = new THREE.GridHelper(12, 24, 0x39ff14, 0x475569);
+            alignmentGrid.position.y = 0;
+            scene.add(alignmentGrid);
 
-            // Translucent Plane to catch mouse pointer calculation clicks
-            const planeGeo = new THREE.PlaneGeometry(10, 10);
-            planeGeo.rotateX(-Math.PI / 2);
-            const planeMat = new THREE.MeshBasicMaterial({ visible: false });
-            gridPlane = new THREE.Mesh(planeGeo, planeMat);
+            // Invisible physical tracking geometry layout matrix block to capture finger taps
+            const planeGeometry = new THREE.PlaneGeometry(12, 12);
+            planeGeometry.rotateX(-Math.PI / 2);
+            const planeMaterial = new THREE.MeshBasicMaterial({ visible: false });
+            gridPlane = new THREE.Mesh(planeGeometry, planeMaterial);
             scene.add(gridPlane);
 
-            // Setup Raycasting structures to identify where finger coordinates tap on screen
             raycaster = new THREE.Raycaster();
             mouse = new THREE.Vector2();
 
-            // Event Listeners
-            window.addEventListener('pointerdown', onGridClick);
-            window.addEventListener('resize', onWindowResize);
+            // Hardware Action Triggers
+            window.addEventListener('pointerdown', handlePlacementRaycast);
+            window.addEventListener('resize', handleWindowResizeResize);
             
-            // Depth Slider Listener
-            document.getElementById('depthSlider').addEventListener('input', (e) => {
-                document.getElementById('depthVal').innerText = `-${parseFloat(e.target.value).toFixed(1)}m`;
+            // UI Depth Control Response Node
+            document.getElementById('depthSlider').addEventListener('input', (event) => {
+                document.getElementById('depthVal').innerText = `-${parseFloat(event.target.value).toFixed(1)}m`;
             });
 
-            animate();
+            animateLoop();
         }
 
-        // 3. Toolbox Selection Interface Logic
+        // 4. Designer Toolbox Deck Select Logic
         function selectTool(toolType) {
             selectedTool = toolType;
             document.getElementById('btn-water').classList.remove('active');
@@ -122,79 +137,87 @@
             document.getElementById(`btn-${toolType}`).classList.add('active');
         }
 
-        // 4. Raycasting Engine: Adds a 3D structural pipe right underneath your click location
-        function onGridClick(event) {
-            // Disable structure creation if interacting with overlay box controls
+        // 5. Procedural AR Mesh Factory: Projects structures down into the floor on mouse/touch vectors
+        function handlePlacementRaycast(event) {
+            // Block structural deployment loops if clicking over the top overlay dashboard area
             if (event.clientY < 140 && event.clientX > window.innerWidth * 0.05 && event.clientX < window.innerWidth * 0.95) return;
 
-            // Normalize coordinate system mapping vectors
+            // Map and parse dynamic hardware interface matrices
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObject(gridPlane);
+            const trackingIntersections = raycaster.intersectObject(gridPlane);
 
-            if (intersects.length > 0) {
-                const intersectPoint = intersects[0].point;
-                const chosenDepth = parseFloat(document.getElementById('depthSlider').value);
+            if (trackingIntersections.length > 0) {
+                const vectorPoint = trackingIntersections[0].point;
+                const setDepth = parseFloat(document.getElementById('depthSlider').value);
 
-                // Build a 3D Cylinder line structure (a pipeline segment)
-                const segmentLength = 1.2;
-                const pipeGeo = new THREE.CylinderGeometry(toolRadii[selectedTool], toolRadii[selectedTool], segmentLength, 16);
-                pipeGeo.rotateZ(Math.PI / 2); // Align laying flat
+                // Build out a 3D structural pipe casing vector item
+                const pipeUnitLength = 1.4;
+                const cylinderGeometry = new THREE.CylinderGeometry(toolRadii[selectedTool], toolRadii[selectedTool], pipeUnitLength, 16);
+                cylinderGeometry.rotateZ(Math.PI / 2); // Rotate to lay perfectly level down inside trench line
 
-                const pipeMat = new THREE.MeshStandardMaterial({
+                const materialConfiguration = new THREE.MeshStandardMaterial({
                     color: toolColors[selectedTool],
-                    metalness: 0.7,
-                    roughness: 0.2,
-                    wireframe: false
+                    metalness: 0.8,
+                    roughness: 0.2
                 });
 
-                const pipeSegment = new THREE.Mesh(pipeGeo, pipeMat);
-                
-                // Position object precisely where tap occurred, dropping it downwards based on slider meters value
-                pipeSegment.position.set(intersectPoint.x, -chosenDepth, intersectPoint.z);
-                
-                // Add tag descriptor identifier variables to model group structure arrays
-                pipeSegment.userData = { isStructure: true };
-                scene.add(pipeSegment);
+                const structuralAssetMesh = new THREE.Mesh(cylinderGeometry, materialConfiguration);
+                // Position accurately, dropping it down underneath the floor vector coordinate plane grid lines
+                structuralAssetMesh.position.set(vectorPoint.x, -setDepth, vectorPoint.z);
+                structuralAssetMesh.userData = { isCustomStructure: true };
+                scene.add(structuralAssetMesh);
 
-                // Add a matching warning dashed wire structure connecting it up to surface to visualize the underground layout connection path
-                const lineGeo = new THREE.BufferGeometry().setFromPoints([
-                    new THREE.Vector3(intersectPoint.x, 0, intersectPoint.z),
-                    new THREE.Vector3(intersectPoint.x, -chosenDepth, intersectPoint.z)
+                // Build vertical tracking neon wire indicator paths linking structure back to screen surface marker reference points
+                const trajectoryGeometry = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(vectorPoint.x, 0, vectorPoint.z),
+                    new THREE.Vector3(vectorPoint.x, -setDepth, vectorPoint.z)
                 ]);
-                const lineMat = new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.2, gapSize: 0.1 });
-                const indicatorLine = new THREE.Line(lineGeo, lineMat);
-                indicatorLine.computeLineDistances();
-                indicatorLine.userData = { isStructure: true };
-                scene.add(indicatorLine);
+                const lineMaterialStructure = new THREE.LineDashedMaterial({
+                    color: 0x39ff14,
+                    dashSize: 0.15,
+                    gapSize: 0.1
+                });
+                const structuralAxisPathLine = new THREE.Line(
+                    trajectoryGeometry,
+                    lineMaterialStructure
+                );
+
+                structuralAxisPathLine.computeLineDistances();
+                structuralAxisPathLine.userData = { isCustomStructure: true };
+                scene.add(structuralAxisPathLine);
             }
         }
 
-        // 5. Clean Screen Utility Routine
+        // 6. Reset Asset Map Control
         function clearDesign() {
-            const structuresToRemove = [];
-            scene.traverse((child) => {
-                if (child.userData && child.userData.isStructure) {
-                    structuresToRemove.push(child);
+            const trashBinArray = [];
+
+            scene.traverse((nodeElement) => {
+                if (
+                    nodeElement.userData &&
+                    nodeElement.userData.isCustomStructure
+                ) {
+                    trashBinArray.push(nodeElement);
                 }
             });
-            structuresToRemove.forEach(obj => scene.remove(obj));
+
+            trashBinArray.forEach((deadMeshItem) => {
+                scene.remove(deadMeshItem);
+            });
         }
 
-        // 6. Framing Thread Core Renderer
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update(); // Smooth view rotations
+        // 7. System Frame Loop Render Loop Thread
+        function animateLoop() {
+            requestAnimationFrame(animateLoop);
+            controls.update();
             renderer.render(scene, camera);
         }
 
-        function onWindowResize() {
+        function handleWindowResizeResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
-
-        // Boot initialization sequence
-        init();
